@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global reset tweaks */
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  @apply bg-surface text-slate-100 antialiased;
+  font-family: theme("fontFamily.sans");
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: theme("colors.muted");
+}
+::-webkit-scrollbar-thumb {
+  background: theme("colors.brand.DEFAULT");
+  border-radius: 9999px;
+}
