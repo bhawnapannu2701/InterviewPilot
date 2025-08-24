@@ -1,20 +1,36 @@
-/**
- * Placeholder for future streaming UI.
- * For now the Interview route handles messages; this component can render a list nicely.
- */
-import { motion } from "framer-motion";
+// client/src/components/chat/ChatStream.tsx
+import React from "react";
 import ChatBubble from "./ChatBubble";
+import TypingDots from "./TypingDots";
 
-export interface ChatMessage { role: "user" | "assistant"; content: string; }
+type Msg = {
+  role: "user" | "assistant";
+  content: string; // stored/content name is fine here
+};
 
-export default function ChatStream({ messages }: { messages: ChatMessage[] }) {
+interface Props {
+  messages: Msg[];
+  isAssistantTyping?: boolean;
+  className?: string;
+}
+
+export default function ChatStream({
+  messages,
+  isAssistantTyping = false,
+  className = "",
+}: Props) {
   return (
-    <div className="space-y-3">
-      {messages.map((m, i) => (
-        <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-          <ChatBubble role={m.role} content={m.content} />
-        </motion.div>
+    <div className={`flex flex-col gap-3 ${className}`}>
+      {messages.map((m, idx) => (
+        // ChatBubble expects `text`, so forward content -> text
+        <ChatBubble key={idx} role={m.role} text={m.content} />
       ))}
+
+      {isAssistantTyping && (
+        <div className="self-start">
+          <TypingDots />
+        </div>
+      )}
     </div>
   );
 }
