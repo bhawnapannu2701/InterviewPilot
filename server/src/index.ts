@@ -1,3 +1,4 @@
+// server/src/index.ts
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -13,12 +14,45 @@ import { errorHandler } from "./middleware/errorHandler";
 
 const app = express();
 
+/**
+ * Behind Render’s proxy, this ensures req.secure is set correctly
+ * so “secure” cookies (SameSite=None) work in production.
+ */
+app.set("trust proxy", 1);
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(morgan("dev"));
+
+/**
+ * CORS: allow your Vercel frontend and send cookies.
+ * IMPORTANT:
+ *   - ENV.CORS_ORIGIN should be EXACT (no trailing slash), e.g.
+ *     https://interview-pilot-three.vercel.app
+ */
+const allowedOrigins = [ENV.CORS_ORIGIN].filter(Boolean);
+
 app.use(
   cors({
-    origin: ENV.CORS_ORIGIN,
+    origin(origin, cb) {
+      // Allow same-origin tools (no Origin header), Postman/cURL, and your allowed frontend
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error(`Not allowed by CORS: ${origin}`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
+
+// Be explicit with preflight so some proxies/CDNs don’t block it
+app.options(
+  "*",
+  cors({
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(new Error(`Not allowed by CORS: ${origin}`));
+    },
     credentials: true,
   })
 );
@@ -45,7 +79,7 @@ app.get("/api/session/:id/export/pdf", (req, res, next) => {
   (exportRoutes as any)(req, res, next);
 });
 
-// Final safety net for any /api* 404s: return success: true so UI toasts don’t show “Not Found”
+// Final safety net for any /api* 404s: avoid scary “Not Found” toast on client
 app.use("/api", (_req, res) => {
   res.status(200).json({ success: true, data: null });
 });
@@ -57,9 +91,9 @@ app.use(errorHandler);
 mongoose
   .connect(ENV.MONGO_URI)
   .then(() => {
-    app.listen(ENV.PORT, () =>
-      console.log(`🚀 Server running on http://localhost:${ENV.PORT}`)
-    );
+    app.listen(ENV.PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${ENV.PORT}`);
+    });
   })
   .catch((err) => {
     console.error("❌ Failed to connect to MongoDB", err);
